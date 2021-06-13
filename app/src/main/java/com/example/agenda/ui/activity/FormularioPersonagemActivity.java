@@ -5,11 +5,16 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import android.content.Intent;
 import android.os.Bundle;
+import android.os.Debug;
+import android.text.TextUtils;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.ArrayAdapter;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.Spinner;
 import android.widget.Toast;
 
 import com.example.agenda.R;
@@ -17,19 +22,29 @@ import com.example.agenda.dao.PersonagemDAO;
 import com.example.agenda.model.Personagem;
 import com.github.rtoshiro.util.format.SimpleMaskFormatter;
 import com.github.rtoshiro.util.format.text.MaskTextWatcher;
+import com.github.rtoshiro.util.format.text.SimpleMaskTextWatcher;
 
-public class FormularioPersonagemActivity extends AppCompatActivity {
+public class FormularioPersonagemActivity extends AppCompatActivity implements AdapterView.OnItemSelectedListener {
 
 
     //Criando componentes de texto a serem editados (correspondem a nome, altura e data de nascimento)
     EditText campoNome;
     EditText campoAltura;
     EditText campoNascimento;
+    EditText campoTelefone;
+    EditText campoEndereco;
+    EditText campoCep;
+    EditText campoRg;
+    //Criando componente spinner para a escolha de gênero
+    Spinner generoSpinner;
 
     //Cria um objeto da classe "DAO", que faz a persistência dos dados
     final PersonagemDAO dao = new PersonagemDAO();
     //Cria um objeto da classe personagem, que contém as informações definidas nos textos das linhas anteriores.
     Personagem personagem;
+
+    //Adaptador para as opções de gênero
+    ArrayAdapter<CharSequence> genderAdapter;
 
 
     //Método que cria pequeno botão no topo da tela ao entrar na tela de formulário
@@ -103,6 +118,16 @@ public class FormularioPersonagemActivity extends AppCompatActivity {
         campoAltura.setText(personagem.getAltura());
         //Preenche o texto "nascimento" com a data de nascimento do personagem atual
         campoNascimento.setText(personagem.getNascimento());
+        //Preenche o texto "telefone" com o telefone do personagem atual
+        campoTelefone.setText(personagem.getTelefone());
+        //Preenche o texto "endereço" com o endereço do personagem atual
+        campoEndereco.setText(personagem.getEndereco());
+        //Preenche o texto "CEP" com o CEP do personagem atual
+        campoCep.setText(personagem.getCep());
+        //Preenche o texto "RG" com o RG do personagem atual
+        campoRg.setText(personagem.getRg());
+        //Seleciona o spinner de gênero
+        generoSpinner.setSelection(personagem.getGenero());
     }
 
     //Método que administra o botão de salvamento(atualmente oculto)
@@ -129,7 +154,18 @@ public class FormularioPersonagemActivity extends AppCompatActivity {
         campoNome = findViewById(R.id.editText_Nome);
         campoAltura = findViewById(R.id.editText_Altura);
         campoNascimento = findViewById(R.id.editText_DataNascimento);
+        campoTelefone = findViewById(R.id.editText_Telefone);
+        campoEndereco = findViewById(R.id.editText_Endereco);
+        campoCep = findViewById(R.id.editText_CEP);
+        campoRg = findViewById(R.id.editText_RG);
+        //Obtendo o spinner do gênero
+        generoSpinner = findViewById(R.id.dropDown_genero);
+        FormataTexto();
+        //Método que inicializa o spinner de gênero
+        InicializaGenero();
+    }
 
+    private void FormataTexto() {
         //Cria uma formatação para o texto de altura, mantendo o texto num formato específico
         SimpleMaskFormatter smfAltura = new SimpleMaskFormatter("N,NN");
         //Cria uma segunda formatação com base na variável criada na linha anterior e o campo de texto "altura"
@@ -139,10 +175,38 @@ public class FormularioPersonagemActivity extends AppCompatActivity {
 
         //Cria uma formatação para o texto de data de nascimento
         SimpleMaskFormatter smfNascimento = new SimpleMaskFormatter("NN/NN/NNNN");
-        //Cria uma seguna formatação com base na variável da linha anterior
+        //Cria uma segunda formatação com base na variável da linha anterior
         MaskTextWatcher mtwNascimento = new MaskTextWatcher(campoNascimento,smfNascimento);
         //Adiciona a formatação ao campo de texto
         campoNascimento.addTextChangedListener(mtwNascimento);
+
+        //Cria uma formatação para o texto de telefone e a aplica para o campo de telefone
+        SimpleMaskFormatter smfTelefone = new SimpleMaskFormatter("(NN)NNNNN-NNNN");
+        MaskTextWatcher mtwTelefone = new MaskTextWatcher(campoTelefone, smfTelefone);
+        campoTelefone.addTextChangedListener(mtwTelefone);
+
+        //Cria uma formatação para o texto de CEP e a aplica para o campo de CEP
+        SimpleMaskFormatter sfmCep = new SimpleMaskFormatter("NNNNN-NNN");
+        MaskTextWatcher mtwCep = new MaskTextWatcher(campoCep, sfmCep);
+        campoCep.addTextChangedListener(mtwCep);
+
+        //Cria uma formatação para o texto de RG e a aplica para o campo de RG
+        SimpleMaskFormatter smfRg = new SimpleMaskFormatter("NN.NNN.NNN-N");
+        MaskTextWatcher mtwRg = new MaskTextWatcher(campoRg, smfRg);
+        campoRg.addTextChangedListener(mtwRg);
+    }
+
+    void InicializaGenero()
+    {
+        //Iniciando o campo de gênero
+        //Atribuindo a lista de gêneros
+        genderAdapter = ArrayAdapter.createFromResource(this, R.array.generos, android.R.layout.simple_spinner_dropdown_item);
+        //Definindo o layout para a lista de gêneros
+        genderAdapter.setDropDownViewResource(android.R.layout.simple_spinner_dropdown_item);
+        //Definindo a lista contida no spinner como a gerada na linha anterior
+        generoSpinner.setAdapter(genderAdapter);
+        //Definindo quais itens aparecerão ao clicar no spinner
+        generoSpinner.setOnItemSelectedListener(this);
     }
 
     //Método que preencherá as variáveis personagem atual com base no que será digitado nos campos de texto
@@ -154,12 +218,23 @@ public class FormularioPersonagemActivity extends AppCompatActivity {
         String altura = campoAltura.getText().toString();
         //Obtém o texto do campo de texto "nascimento"
         String nascimento = campoNascimento.getText().toString();
+        String telefone = campoTelefone.getText().toString();
+        String endereco = campoEndereco.getText().toString();
+        String cep = campoCep.getText().toString();
+        String rg = campoRg.getText().toString();
+        int genero = generoSpinner.getSelectedItemPosition();
 
         //Adicionando os textos obtidos nas linhas anteriores ao personagem atual
         personagem.setNome(nome);
         personagem.setAltura(altura);
         personagem.setNascimento(nascimento);
+        personagem.setTelefone(telefone);
+        personagem.setEndereco(endereco);
+        personagem.setCep(cep);
+        personagem.setRg(rg);
+        personagem.setGenero(genero);
     }
+
 
     //Método que finalizará o preenchimento do formulário
     void FinalizarFormulario()
@@ -184,4 +259,15 @@ public class FormularioPersonagemActivity extends AppCompatActivity {
         finish();
     }
 
+    //Métodos que administram oque ocorrerá ao utilizar o spinner de gênero (Se forem apagados, ocorrem erros)
+    @Override
+    public void onItemSelected(AdapterView<?> parent, View view, int position, long id)
+    {
+
+    }
+
+    @Override
+    public void onNothingSelected(AdapterView<?> parent) {
+
+    }
 }
